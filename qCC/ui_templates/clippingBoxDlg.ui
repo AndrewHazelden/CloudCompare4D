@@ -76,6 +76,17 @@
       </spacer>
      </item>
      <item>
+      <widget class="QToolButton" name="saveXMLToolButton">
+       <property name="toolTip">
+        <string>Save a cross_section_params.xml file to disk.</string>
+       </property>
+       <property name="icon">
+        <iconset resource="../icones.qrc">
+         <normaloff>:/CC/images/ccSave.png</normaloff>:/CC/images/ccSave.png</iconset>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QToolButton" name="restoreToolButton">
        <property name="enabled">
         <bool>false</bool>

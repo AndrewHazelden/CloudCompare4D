@@ -109,6 +109,7 @@ protected slots:
 	void toggleBox(bool);
 
 	void editBox();
+	void saveXML();
 	void restoreLastBox();
 	void reset();
 	void closeDialog();

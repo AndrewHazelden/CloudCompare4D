@@ -16,6 +16,7 @@
 //##########################################################################
 
 #include "ccClippingBoxTool.h"
+#include "ccFileUtils.h"
 
 //Local
 #include "ccBoundingBoxEditorDlg.h"
@@ -31,6 +32,9 @@
 #include <ccProgressDialog.h>
 
 //Qt
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QSettings>
 #include <QMessageBox>
 
 //Last contour unique ID
@@ -57,6 +61,7 @@ ccClippingBoxTool::ccClippingBoxTool(QWidget* parent)
 {
 	setupUi(this);
 
+	connect(saveXMLToolButton,				SIGNAL(clicked()),				this, SLOT(saveXML()));
 	connect(editBoxToolButton,				SIGNAL(clicked()),				this, SLOT(editBox()));
 	connect(extractContourToolButton,		SIGNAL(clicked()),				this, SLOT(extractContour()));
 	connect(removeLastContourToolButton,	SIGNAL(clicked()),				this, SLOT(removeLastContour()));
@@ -153,6 +158,69 @@ void ccClippingBoxTool::editBox()
 	}
 
 	//onBoxModified(&box); //DGM: automatically called by 'm_clipBox'
+
+	if (m_associatedWin)
+	{
+		m_associatedWin->redraw();
+	}
+}
+
+void ccClippingBoxTool::saveXML()
+{
+	if (!m_clipBox)
+		return;
+
+	//persistent settings
+	QSettings settings;
+	settings.beginGroup("SaveXMLDialog");
+	QString currentPath = settings.value("savePath", ccFileUtils::defaultDocPath()).toString();
+
+	QString outputFilename = QFileDialog::getSaveFileName(this, "Select output file", currentPath, "*.xml");
+	if (outputFilename.isEmpty())
+		return;
+
+	QFile file(outputFilename);
+	if (!file.open(QFile::Text | QFile::WriteOnly))
+	{
+		ccLog::Warning(QString("[ccClippingBoxTool::saveXML] Failed to open file '%1' for writing").arg(outputFilename));
+		return;
+	}
+	
+	QTextStream stream(&file);
+	stream.setRealNumberPrecision(6);
+	stream.setRealNumberNotation(QTextStream::FixedNotation);
+
+	CCVector3 center = m_clipBox->getBox().getCenter();
+	CCVector3 diag = m_clipBox->getBox().getDiagVec();
+
+	stream << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" << endl;
+	stream << "<CloudCompare>" << endl;
+	stream << "\t<!-- BoxCenter: clipping-box center -->" << endl;
+	stream << "\t<BoxCenter x=\"" << center.x << "\" y=\"" << center.y << "\" z=\"" << center.z << "\"/>" << endl;
+	stream << "\t<!-- BoxThickness: base clipping-box dimensions -->" << endl;
+	stream << "\t<BoxThickness x=\"" << diag.x << "\" y=\"" << diag.y << "\" z=\"" << diag.z << "\"/>" << endl;
+	stream << "\t<RepeatDim>0</RepeatDim>" << endl;
+	stream << "\t<!-- Optional (gap = 0 by default) -->" << endl;
+	stream << "\t<RepeatGap>0</RepeatGap>" << endl;
+	stream << "\t<!-- Input/Output folder path -->" << endl;
+	stream << "\t<OutputFilePath>" << currentPath << "</OutputFilePath>" << endl;
+	stream << "\t<!--<FilePath>" << currentPath << "</FilePath>-->" << endl;
+	stream << "</CloudCompare>" << endl;
+
+	file.close();
+
+	if (file.error() == QFile::NoError)
+	{
+		ccLog::Print(QString("[I/O] Cross-section parameters saved as '%1'").arg(outputFilename));
+	}
+	else
+	{
+		ccLog::Error(QString("[I/O] Failed to save cross-section parameters as '%1'").arg(outputFilename));
+	}
+
+	//save last saving location
+	settings.setValue("savePath", QFileInfo(outputFilename).absolutePath());
+	settings.endGroup();
 
 	if (m_associatedWin)
 	{
